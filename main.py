@@ -35,6 +35,52 @@ app.add_middleware(
 # ============================
 class AssistRequest(BaseModel):
     text: str
+    theme: str = "daily"
+
+
+# ============================
+# テーマ別 system prompt
+# ============================
+def get_system_prompt(theme: str) -> str:
+    if theme == "travel":
+        return """
+You are an English conversation partner for travel situations.
+Respond like a friendly person at airports, stations, shops, or sightseeing spots.
+When the user speaks in Japanese, translate it into natural, simple English.
+Keep sentences short and conversational.
+Always return only the English sentence.
+"""
+    if theme == "restaurant":
+        return """
+You are an English conversation partner for restaurant situations.
+Respond like a waiter or someone dining with the user.
+When the user speaks in Japanese, translate it into natural, simple English.
+Keep sentences short and conversational.
+Always return only the English sentence.
+"""
+    if theme == "hotel":
+        return """
+You are an English conversation partner for hotel situations.
+Respond like a hotel clerk or a guest.
+When the user speaks in Japanese, translate it into natural, simple English.
+Keep sentences short and conversational.
+Always return only the English sentence.
+"""
+    if theme == "business":
+        return """
+You are an English conversation partner for simple business situations.
+Respond politely and clearly, using short sentences.
+When the user speaks in Japanese, translate it into natural, simple English.
+Always return only the English sentence.
+"""
+    # daily（デフォルト）
+    return """
+You are an English conversation assistant for daily situations.
+When the user speaks in Japanese, translate it into natural, simple English.
+If the user speaks in English, reply naturally in English.
+Keep sentences short and conversational.
+Always return only the English sentence.
+"""
 
 
 # ============================
@@ -51,16 +97,26 @@ def ui():
 <title>AI英会話アシスタント</title>
 <style>
   body { font-family: sans-serif; padding: 16px; }
-  #chat { height: 60vh; overflow-y: auto; border: 1px solid #ccc; padding: 10px; }
+  #chat { height: 55vh; overflow-y: auto; border: 1px solid #ccc; padding: 10px; margin-top: 12px; }
   .me { text-align: right; margin: 8px 0; }
   .ai { text-align: left; margin: 8px 0; }
   button { width: 100%; padding: 14px; font-size: 18px; margin-top: 8px; }
-  input { width: 100%; padding: 12px; font-size: 18px; }
+  input { width: 100%; padding: 12px; font-size: 18px; margin-top: 8px; }
+  select { width: 100%; padding: 12px; font-size: 18px; margin-top: 8px; }
 </style>
 </head>
 <body>
 
 <h2>AI英会話アシスタント</h2>
+
+<!-- テーマ選択 -->
+<select id="theme">
+  <option value="daily">日常会話</option>
+  <option value="travel">旅行</option>
+  <option value="restaurant">レストラン</option>
+  <option value="hotel">ホテル</option>
+  <option value="business">ビジネス</option>
+</select>
 
 <!-- テキスト入力欄 -->
 <input id="jpInput" type="text" placeholder="日本語を入力…">
@@ -106,12 +162,14 @@ function speakEnglish(text) {
 
 // ===== AIに送信して英語で応答 =====
 async function sendToAI(text) {
+  const theme = document.getElementById("theme").value;
+
   addMessage(text, "me");
 
   const res = await fetch("/assist", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ text })
+    body: JSON.stringify({ text, theme })
   });
 
   const data = await res.json();
@@ -176,14 +234,7 @@ document.getElementById("talkBtn").onclick = () => {
 # ============================
 @app.post("/assist")
 async def assist(data: AssistRequest):
-
-    system_prompt = """
-You are an English conversation assistant.
-When the user speaks in Japanese, translate it into natural, simple English.
-Keep sentences short and conversational.
-If the user speaks in English, reply naturally in English.
-Always return only the English sentence.
-"""
+    system_prompt = get_system_prompt(data.theme)
 
     res = client.chat.completions.create(
         model=os.getenv("AZURE_OPENAI_DEPLOYMENT"),
@@ -196,5 +247,4 @@ Always return only the English sentence.
     )
 
     reply_text = res.choices[0].message.content.strip()
-
     return {"reply": reply_text}
