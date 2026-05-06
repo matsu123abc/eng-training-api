@@ -172,6 +172,19 @@ async function sendToAI(text) {
 
   addMessage(text, "me");
 
+  // ① ユーザー日本語 → 英語翻訳（常に実行）
+  const trans = await fetch("/assist", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ text, mode: "translate", theme })
+  });
+  const transData = await trans.json();
+  const userEnglish = transData.reply;
+
+  // ★ 日本語の下に英語を表示
+  addMessage("→ " + userEnglish, "me");
+
+  // ② 会話モードなら AI の返事を取得
   const res = await fetch("/assist", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
