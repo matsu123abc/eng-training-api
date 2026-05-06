@@ -372,13 +372,22 @@ Return only the English sentences.
         )
         return {"reply": res.choices[0].message.content.strip(), "results": None}
   
-    # 会話モード：検索トリガー（日本語 + 英語）
-    if ("検索" in data.text) or ("調べ" in data.text) or ("search" in data.text.lower()):
+    # 会話モード：検索トリガー（日本語 + 英語 + カタカナ）
+    if (
+        "検索" in data.text or
+        "調べ" in data.text or
+        "サーチ" in data.text or
+        "さーち" in data.text or
+        "search" in data.text.lower()
+    ):
         query = (
             data.text
             .replace("検索して", "")
             .replace("検索", "")
             .replace("調べて", "")
+            .replace("調べる", "")
+            .replace("サーチ", "")
+            .replace("さーち", "")
             .replace("search", "")
             .strip()
         )
