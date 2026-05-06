@@ -38,8 +38,8 @@ app.add_middleware(
 # ============================
 class AssistRequest(BaseModel):
     text: str
-    mode: str
-    theme: str
+    mode: str   # "translate" or "conversation"
+    theme: str  # daily / travel / restaurant / hotel / business
 
 
 # ============================
@@ -82,7 +82,7 @@ Keep sentences short and conversational.
 
 
 # ============================
-# Serper Search (3件)
+# Serper Search (3件に制限)
 # ============================
 def serper_search(query: str):
     url = "https://serpapi.com/search"
@@ -180,46 +180,9 @@ let recognizing = false;
 function addMessage(text, who) {
   const div = document.createElement("div");
   div.className = who;
-  div.innerHTML = text;
-  const chat = document.getElementById("chat");
-  chat.appendChild(div);
-  chat.scrollTop = chat.scrollHeight;
-}
-
-// 翻訳モードの文例をタップで音声再生
-function formatTranslation(text) {
-  const lines = text.split("\n")
-    .map(line => line.trim())
-    .filter(line => line.length > 0);
-
-  let html = "";
-
-  lines.forEach(line => {
-    // HTML 属性用に安全にエスケープ
-    const safe = line
-      .replace(/&/g, "&amp;")
-      .replace(/"/g, "&quot;")
-      .replace(/'/g, "&#39;");
-
-    html +=
-      '<div class="translation-line" ' +
-      'data-text="' + safe + '" ' +
-      'style="margin-bottom:10px; padding:6px; border-radius:6px; background:#f0f0f0; cursor:pointer;">' +
-      line +
-      '</div>';
-  });
-
-  return html;
-}
-
-// ▼ 追加：文例カードにクリックイベントを付与
-function attachTranslationClickHandlers() {
-  document.querySelectorAll(".translation-line").forEach(el => {
-    el.onclick = () => {
-      const text = el.getAttribute("data-text");
-      speakEnglish(text);
-    };
-  });
+  div.textContent = text;
+  document.getElementById("chat").appendChild(div);
+  document.getElementById("chat").scrollTop = document.getElementById("chat").scrollHeight;
 }
 
 function showSearchResults(items) {
@@ -271,22 +234,17 @@ async function sendToAI(text) {
 
   addMessage(text, "me");
 
-  // ① 翻訳（5文例）
+  // 日本語 → 英語（ユーザー発話の翻訳）
   const trans = await fetch("/assist", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ text, mode: "translate", theme })
   });
   const transData = await trans.json();
+  const userEnglish = transData.reply;
+  addMessage("→ " + userEnglish, "me");
 
-  // 文例カード化
-  const userEnglish = formatTranslation(transData.reply);
-  addMessage(userEnglish, "me");
-
-  // 文例カードにクリックイベント付与
-  attachTranslationClickHandlers();
-
-  // ② 会話 or 検索
+  // 会話 or 検索
   const res = await fetch("/assist", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -295,12 +253,10 @@ async function sendToAI(text) {
 
   const data = await res.json();
 
-  // 検索結果がある場合
   if (data.results) {
     showSearchResults(data.results);
   }
 
-  // ③ AI の返事
   const english = data.reply;
   addMessage(english, "ai");
   speakEnglish(english);
@@ -353,14 +309,13 @@ document.getElementById("talkBtn").onclick = () => {
 </html>
 """
 
-
 # ============================
 # Assist API
 # ============================
 @app.post("/assist")
 async def assist(data: AssistRequest):
 
-    # 翻訳モード（5文例）
+    # 翻訳モード（5種類の英語表現を返す学習モード）
     if data.mode == "translate":
         system_prompt = """
 You are an English rewriting assistant.
@@ -387,7 +342,7 @@ Return only the English sentences.
         )
         return {"reply": res.choices[0].message.content.strip(), "results": None}
 
-    # 会話モード：検索
+    # 会話モード：検索トリガー
     if "検索して" in data.text:
         query = data.text.replace("検索して", "").strip()
         if not query:
