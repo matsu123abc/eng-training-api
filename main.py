@@ -189,18 +189,25 @@ function addMessage(text, who) {
 // 翻訳モードの文例をタップで音声再生
 function formatTranslation(text) {
   return text
-    .split("\\n")
+    .split("\n")
     .map(line => line.trim())
     .filter(line => line.length > 0)
-    .map(line => `
-      <div 
-        class="translation-line" 
-        style="margin-bottom:10px; padding:6px; border-radius:6px; background:#f0f0f0; cursor:pointer;"
-        onclick="speakEnglish('${line.replace(/'/g, "\\'")}')"
-      >
-        ${line}
-      </div>
-    `)
+    .map(line => {
+      // ★ onclick 用に安全にエスケープ
+      const safe = line
+        .replace(/'/g, "\\'")
+        .replace(/"/g, '\\"');
+
+      return `
+        <div 
+          class="translation-line" 
+          style="margin-bottom:10px; padding:6px; border-radius:6px; background:#f0f0f0; cursor:pointer;"
+          onclick="speakEnglish('${safe}')"
+        >
+          ${line}
+        </div>
+      `;
+    })
     .join("");
 }
 
