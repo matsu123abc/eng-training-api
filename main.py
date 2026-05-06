@@ -187,28 +187,32 @@ function addMessage(text, who) {
 }
 
 // 翻訳モードの文例をタップで音声再生
+// ▼ ここを差し替え：文例カード生成（タップで音声再生用の data-text を付与）
 function formatTranslation(text) {
   return text
     .split("\n")
     .map(line => line.trim())
     .filter(line => line.length > 0)
-    .map(line => {
-      // ★ onclick 用に安全にエスケープ
-      const safe = line
-        .replace(/'/g, "\\'")
-        .replace(/"/g, '\\"');
-
-      return `
-        <div 
-          class="translation-line" 
-          style="margin-bottom:10px; padding:6px; border-radius:6px; background:#f0f0f0; cursor:pointer;"
-          onclick="speakEnglish('${safe}')"
-        >
-          ${line}
-        </div>
-      `;
-    })
+    .map(line => `
+      <div 
+        class="translation-line"
+        data-text="${line.replace(/"/g, '&quot;')}"
+        style="margin-bottom:10px; padding:6px; border-radius:6px; background:#f0f0f0; cursor:pointer;"
+      >
+        ${line}
+      </div>
+    `)
     .join("");
+}
+
+// ▼ 追加：文例カードにクリックイベントを付与
+function attachTranslationClickHandlers() {
+  document.querySelectorAll(".translation-line").forEach(el => {
+    el.onclick = () => {
+      const text = el.getAttribute("data-text");
+      speakEnglish(text);
+    };
+  });
 }
 
 function showSearchResults(items) {
@@ -260,7 +264,7 @@ async function sendToAI(text) {
 
   addMessage(text, "me");
 
-  // 翻訳（ユーザー発話の英語化）
+  // ① 日本語 → 英語（翻訳モードの5文例）
   const trans = await fetch("/assist", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -268,10 +272,14 @@ async function sendToAI(text) {
   });
   const transData = await trans.json();
 
+  // ★ 文例カード化（タップで音声再生）
   const userEnglish = formatTranslation(transData.reply);
   addMessage(userEnglish, "me");
 
-  // 会話 or 検索
+  // ★ 文例カードにクリックイベントを付与
+  attachTranslationClickHandlers();
+
+  // ② 会話 or 検索
   const res = await fetch("/assist", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -280,10 +288,12 @@ async function sendToAI(text) {
 
   const data = await res.json();
 
+  // ★ 検索結果がある場合は別ボックスに表示
   if (data.results) {
     showSearchResults(data.results);
   }
 
+  // ③ AI の返事（英語）
   const english = data.reply;
   addMessage(english, "ai");
   speakEnglish(english);
