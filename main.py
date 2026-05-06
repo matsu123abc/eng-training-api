@@ -38,8 +38,8 @@ app.add_middleware(
 # ============================
 class AssistRequest(BaseModel):
     text: str
-    mode: str   # "translate" or "conversation"
-    theme: str  # daily / travel / restaurant / hotel / business
+    mode: str
+    theme: str
 
 
 # ============================
@@ -82,7 +82,7 @@ Keep sentences short and conversational.
 
 
 # ============================
-# Serper Search (3件に制限)
+# Serper Search (3件)
 # ============================
 def serper_search(query: str):
     url = "https://serpapi.com/search"
@@ -180,9 +180,28 @@ let recognizing = false;
 function addMessage(text, who) {
   const div = document.createElement("div");
   div.className = who;
-  div.textContent = text;
-  document.getElementById("chat").appendChild(div);
-  document.getElementById("chat").scrollTop = document.getElementById("chat").scrollHeight;
+  div.innerHTML = text;
+  const chat = document.getElementById("chat");
+  chat.appendChild(div);
+  chat.scrollTop = chat.scrollHeight;
+}
+
+// 翻訳モードの文例をタップで音声再生
+function formatTranslation(text) {
+  return text
+    .split("\\n")
+    .map(line => line.trim())
+    .filter(line => line.length > 0)
+    .map(line => `
+      <div 
+        class="translation-line" 
+        style="margin-bottom:10px; padding:6px; border-radius:6px; background:#f0f0f0; cursor:pointer;"
+        onclick="speakEnglish('${line.replace(/'/g, "\\'")}')"
+      >
+        ${line}
+      </div>
+    `)
+    .join("");
 }
 
 function showSearchResults(items) {
@@ -234,15 +253,16 @@ async function sendToAI(text) {
 
   addMessage(text, "me");
 
-  // 日本語 → 英語（ユーザー発話の翻訳）
+  // 翻訳（ユーザー発話の英語化）
   const trans = await fetch("/assist", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ text, mode: "translate", theme })
   });
   const transData = await trans.json();
-  const userEnglish = transData.reply;
-  addMessage("→ " + userEnglish, "me");
+
+  const userEnglish = formatTranslation(transData.reply);
+  addMessage(userEnglish, "me");
 
   // 会話 or 検索
   const res = await fetch("/assist", {
@@ -309,13 +329,14 @@ document.getElementById("talkBtn").onclick = () => {
 </html>
 """
 
+
 # ============================
 # Assist API
 # ============================
 @app.post("/assist")
 async def assist(data: AssistRequest):
 
-    # 翻訳モード（5種類の英語表現を返す学習モード）
+    # 翻訳モード（5文例）
     if data.mode == "translate":
         system_prompt = """
 You are an English rewriting assistant.
@@ -342,7 +363,7 @@ Return only the English sentences.
         )
         return {"reply": res.choices[0].message.content.strip(), "results": None}
 
-    # 会話モード：検索トリガー
+    # 会話モード：検索
     if "検索して" in data.text:
         query = data.text.replace("検索して", "").strip()
         if not query:
