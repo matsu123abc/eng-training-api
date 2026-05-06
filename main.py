@@ -180,7 +180,7 @@ let recognizing = false;
 function addMessage(text, who) {
   const div = document.createElement("div");
   div.className = who;
-  div.innerHTML = text;
+  div.innerHTML = text;   // ← これに変更
   const chat = document.getElementById("chat");
   chat.appendChild(div);
   chat.scrollTop = chat.scrollHeight;
