@@ -188,28 +188,28 @@ function addMessage(text, who) {
 
 // 翻訳モードの文例をタップで音声再生
 function formatTranslation(text) {
-  return text
-    .split("\n")
+  const lines = text.split("\n")
     .map(line => line.trim())
-    .filter(line => line.length > 0)
-    .map(line => {
-      // HTML 属性用に安全にエスケープ
-      const safe = line
-        .replace(/&/g, "&amp;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#39;");
+    .filter(line => line.length > 0);
 
-      return `
-        <div 
-          class="translation-line"
-          data-text="${safe}"
-          style="margin-bottom:10px; padding:6px; border-radius:6px; background:#f0f0f0; cursor:pointer;"
-        >
-          ${line}
-        </div>
-      `;
-    })
-    .join("");
+  let html = "";
+
+  lines.forEach(line => {
+    // HTML 属性用に安全にエスケープ
+    const safe = line
+      .replace(/&/g, "&amp;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+
+    html +=
+      '<div class="translation-line" ' +
+      'data-text="' + safe + '" ' +
+      'style="margin-bottom:10px; padding:6px; border-radius:6px; background:#f0f0f0; cursor:pointer;">' +
+      line +
+      '</div>';
+  });
+
+  return html;
 }
 
 // ▼ 追加：文例カードにクリックイベントを付与
