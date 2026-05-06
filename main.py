@@ -187,21 +187,28 @@ function addMessage(text, who) {
 }
 
 // 翻訳モードの文例をタップで音声再生
-// ▼ ここを差し替え：文例カード生成（タップで音声再生用の data-text を付与）
 function formatTranslation(text) {
   return text
     .split("\n")
     .map(line => line.trim())
     .filter(line => line.length > 0)
-    .map(line => `
-      <div 
-        class="translation-line"
-        data-text="${line.replace(/"/g, '&quot;')}"
-        style="margin-bottom:10px; padding:6px; border-radius:6px; background:#f0f0f0; cursor:pointer;"
-      >
-        ${line}
-      </div>
-    `)
+    .map(line => {
+      // HTML 属性用に安全にエスケープ
+      const safe = line
+        .replace(/&/g, "&amp;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+
+      return `
+        <div 
+          class="translation-line"
+          data-text="${safe}"
+          style="margin-bottom:10px; padding:6px; border-radius:6px; background:#f0f0f0; cursor:pointer;"
+        >
+          ${line}
+        </div>
+      `;
+    })
     .join("");
 }
 
@@ -264,7 +271,7 @@ async function sendToAI(text) {
 
   addMessage(text, "me");
 
-  // ① 日本語 → 英語（翻訳モードの5文例）
+  // ① 翻訳（5文例）
   const trans = await fetch("/assist", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -272,11 +279,11 @@ async function sendToAI(text) {
   });
   const transData = await trans.json();
 
-  // ★ 文例カード化（タップで音声再生）
+  // 文例カード化
   const userEnglish = formatTranslation(transData.reply);
   addMessage(userEnglish, "me");
 
-  // ★ 文例カードにクリックイベントを付与
+  // 文例カードにクリックイベント付与
   attachTranslationClickHandlers();
 
   // ② 会話 or 検索
@@ -288,12 +295,12 @@ async function sendToAI(text) {
 
   const data = await res.json();
 
-  // ★ 検索結果がある場合は別ボックスに表示
+  // 検索結果がある場合
   if (data.results) {
     showSearchResults(data.results);
   }
 
-  // ③ AI の返事（英語）
+  // ③ AI の返事
   const english = data.reply;
   addMessage(english, "ai");
   speakEnglish(english);
