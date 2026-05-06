@@ -378,29 +378,36 @@ Return only the English sentences.
         "調べ" in data.text or
         "サーチ" in data.text or
         "さーち" in data.text or
+        "look up" in data.text.lower() or
+        "ルックアップ" in data.text or
+        "るっくあっぷ" in data.text or
         "search" in data.text.lower()
     ):
-        query = (
-            data.text
-            .replace("検索して", "")
-            .replace("検索", "")
-            .replace("調べて", "")
-            .replace("調べる", "")
-            .replace("サーチ", "")
-            .replace("さーち", "")
-            .replace("search", "")
-            .strip()
-        )
-        if not query:
-            query = data.text
+        query = data.text
+
+        # 不要語を削除
+        for k in [
+            "検索して", "検索", "調べて", "調べる",
+            "サーチ", "さーち",
+            "look up", "ルックアップ", "るっくあっぷ",
+            "search"
+        ]:
+            query = query.replace(k, "")
+
+        query = query.strip()
 
         results = serper_search(query)
 
         summary_prompt = """
-    You are an assistant that summarizes web search results.
-    Summarize the following search results in natural, simple English.
-    Keep it short and conversational.
-    """
+You are an assistant that summarizes web search results.
+
+Rules:
+- Ignore URLs and link descriptions completely.
+- Do NOT mention website names unless necessary.
+- Focus only on the main information (place, rating, features).
+- Keep the summary short, natural, and conversational.
+- Output 2–3 sentences in simple English.
+"""
 
         res = client.chat.completions.create(
             model=os.getenv("AZURE_OPENAI_DEPLOYMENT"),
