@@ -371,20 +371,27 @@ Return only the English sentences.
             max_tokens=300
         )
         return {"reply": res.choices[0].message.content.strip(), "results": None}
-
-    # 会話モード：検索
-    if "検索して" in data.text:
-        query = data.text.replace("検索して", "").strip()
+  
+    # 会話モード：検索トリガー（日本語 + 英語）
+    if ("検索" in data.text) or ("調べ" in data.text) or ("search" in data.text.lower()):
+        query = (
+            data.text
+            .replace("検索して", "")
+            .replace("検索", "")
+            .replace("調べて", "")
+            .replace("search", "")
+            .strip()
+        )
         if not query:
             query = data.text
 
         results = serper_search(query)
 
         summary_prompt = """
-You are an assistant that summarizes web search results.
-Summarize the following search results in natural, simple English.
-Keep it short and conversational.
-"""
+    You are an assistant that summarizes web search results.
+    Summarize the following search results in natural, simple English.
+    Keep it short and conversational.
+    """
 
         res = client.chat.completions.create(
             model=os.getenv("AZURE_OPENAI_DEPLOYMENT"),
