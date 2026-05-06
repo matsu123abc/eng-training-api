@@ -309,18 +309,27 @@ document.getElementById("talkBtn").onclick = () => {
 </html>
 """
 
-
 # ============================
 # Assist API
 # ============================
 @app.post("/assist")
 async def assist(data: AssistRequest):
 
-    # 翻訳モード
+    # 翻訳モード（5種類の英語表現を返す学習モード）
     if data.mode == "translate":
         system_prompt = """
-Translate the user's Japanese into natural, simple English.
-Return only the English translation.
+You are an English rewriting assistant.
+When the user inputs Japanese, output 5 English versions:
+
+1. Casual English
+2. Simple English that Japanese learners can say easily
+3. Natural native English
+4. Travel English version
+5. Polite / business English
+
+Keep each version short.
+Do NOT add explanations.
+Return only the English sentences.
 """
         res = client.chat.completions.create(
             model=os.getenv("AZURE_OPENAI_DEPLOYMENT"),
@@ -328,8 +337,8 @@ Return only the English translation.
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": data.text}
             ],
-            temperature=0.3,
-            max_tokens=200
+            temperature=0.4,
+            max_tokens=300
         )
         return {"reply": res.choices[0].message.content.strip(), "results": None}
 
