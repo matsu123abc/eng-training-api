@@ -35,51 +35,51 @@ app.add_middleware(
 # ============================
 class AssistRequest(BaseModel):
     text: str
-    theme: str = "daily"
+    mode: str   # "translate" or "conversation"
+    theme: str  # daily / travel / restaurant / hotel / business
 
 
 # ============================
 # テーマ別 system prompt
 # ============================
-def get_system_prompt(theme: str) -> str:
+def get_conversation_prompt(theme: str) -> str:
     if theme == "travel":
         return """
-You are an English conversation partner for travel situations.
-Respond like a friendly person at airports, stations, shops, or sightseeing spots.
-When the user speaks in Japanese, translate it into natural, simple English.
+You are a friendly travel conversation partner.
+Respond as if you are talking with the user in a real travel situation.
+Do NOT translate the user's Japanese.
+Reply naturally in English as a conversation partner.
 Keep sentences short and conversational.
-Always return only the English sentence.
 """
     if theme == "restaurant":
         return """
-You are an English conversation partner for restaurant situations.
+You are a restaurant conversation partner.
 Respond like a waiter or someone dining with the user.
-When the user speaks in Japanese, translate it into natural, simple English.
+Do NOT translate the user's Japanese.
+Reply naturally in English.
 Keep sentences short and conversational.
-Always return only the English sentence.
 """
     if theme == "hotel":
         return """
-You are an English conversation partner for hotel situations.
+You are a hotel conversation partner.
 Respond like a hotel clerk or a guest.
-When the user speaks in Japanese, translate it into natural, simple English.
+Do NOT translate the user's Japanese.
+Reply naturally in English.
 Keep sentences short and conversational.
-Always return only the English sentence.
 """
     if theme == "business":
         return """
-You are an English conversation partner for simple business situations.
-Respond politely and clearly, using short sentences.
-When the user speaks in Japanese, translate it into natural, simple English.
-Always return only the English sentence.
+You are a simple business English conversation partner.
+Respond politely and clearly.
+Do NOT translate the user's Japanese.
+Reply naturally in English.
+Keep sentences short.
 """
-    # daily（デフォルト）
     return """
-You are an English conversation assistant for daily situations.
-When the user speaks in Japanese, translate it into natural, simple English.
-If the user speaks in English, reply naturally in English.
+You are a daily English conversation partner.
+Do NOT translate the user's Japanese.
+Reply naturally in English.
 Keep sentences short and conversational.
-Always return only the English sentence.
 """
 
 
@@ -101,17 +101,22 @@ def ui():
   .me { text-align: right; margin: 8px 0; }
   .ai { text-align: left; margin: 8px 0; }
   button { width: 100%; padding: 14px; font-size: 18px; margin-top: 8px; }
-  input { width: 100%; padding: 12px; font-size: 18px; margin-top: 8px; }
-  select { width: 100%; padding: 12px; font-size: 18px; margin-top: 8px; }
+  input, select { width: 100%; padding: 12px; font-size: 18px; margin-top: 8px; }
 </style>
 </head>
 <body>
 
 <h2>AI英会話アシスタント</h2>
 
+<!-- モード選択 -->
+<select id="mode">
+  <option value="translate">翻訳モード</option>
+  <option value="conversation">会話モード</option>
+</select>
+
 <!-- テーマ選択 -->
 <select id="theme">
-  <option value="daily">日常会話</option>
+  <option value="daily">日常</option>
   <option value="travel">旅行</option>
   <option value="restaurant">レストラン</option>
   <option value="hotel">ホテル</option>
@@ -160,8 +165,9 @@ function speakEnglish(text) {
   speechSynthesis.speak(uttr);
 }
 
-// ===== AIに送信して英語で応答 =====
+// ===== AIに送信 =====
 async function sendToAI(text) {
+  const mode = document.getElementById("mode").value;
   const theme = document.getElementById("theme").value;
 
   addMessage(text, "me");
@@ -169,7 +175,7 @@ async function sendToAI(text) {
   const res = await fetch("/assist", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ text, theme })
+    body: JSON.stringify({ text, mode, theme })
   });
 
   const data = await res.json();
@@ -179,7 +185,7 @@ async function sendToAI(text) {
   speakEnglish(english);
 }
 
-// ===== テキスト入力で会話する =====
+// ===== テキスト入力 =====
 document.getElementById("inputBtn").onclick = () => {
   const text = document.getElementById("jpInput").value;
   if (!text) return;
@@ -187,7 +193,7 @@ document.getElementById("inputBtn").onclick = () => {
   document.getElementById("jpInput").value = "";
 };
 
-// ===== 音声で会話する =====
+// ===== 音声入力 =====
 document.getElementById("talkBtn").onclick = () => {
   if (!('webkitSpeechRecognition' in window)) {
     alert("このブラウザは音声認識に対応していません。");
@@ -234,7 +240,16 @@ document.getElementById("talkBtn").onclick = () => {
 # ============================
 @app.post("/assist")
 async def assist(data: AssistRequest):
-    system_prompt = get_system_prompt(data.theme)
+
+    # 翻訳モード
+    if data.mode == "translate":
+        system_prompt = """
+Translate the user's Japanese into natural, simple English.
+Return only the English translation.
+"""
+    else:
+        # 会話モード
+        system_prompt = get_conversation_prompt(data.theme)
 
     res = client.chat.completions.create(
         model=os.getenv("AZURE_OPENAI_DEPLOYMENT"),
