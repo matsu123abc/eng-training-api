@@ -158,6 +158,11 @@ def ui():
 
 <input id="jpInput" type="text" placeholder="日本語を入力…">
 
+<label style="display:flex; align-items:center; margin-top:10px;">
+  <input type="checkbox" id="slowMode" style="margin-right:8px;">
+  スロー再生
+</label>
+
 <button id="inputBtn">テキスト入力で会話する</button>
 <button id="talkBtn">会話する（音声）</button>
 
@@ -243,6 +248,10 @@ function speakEnglish(text) {
   const uttr = new SpeechSynthesisUtterance(text);
   uttr.lang = "en-US";
   if (femaleVoice) uttr.voice = femaleVoice;
+
+  // ★ スロー再生チェックボックスの状態を反映
+  const slow = document.getElementById("slowMode").checked;
+  uttr.rate = slow ? 0.7 : 1.0;
 
   speechSynthesis.speak(uttr);
 }
