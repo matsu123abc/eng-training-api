@@ -143,18 +143,22 @@ def ui():
 
 <h2>AI英会話アシスタント</h2>
 
-<select id="mode">
-  <option value="translate">翻訳モード</option>
-  <option value="conversation">会話モード</option>
+<!-- モード選択 -->
+<select id="mode" onchange="toggleThemeUI()">
+    <option value="translate">翻訳モード</option>
+    <option value="conversation">会話モード</option>
 </select>
 
-<select id="theme">
-  <option value="daily">日常</option>
-  <option value="travel">旅行</option>
-  <option value="restaurant">レストラン</option>
-  <option value="hotel">ホテル</option>
-  <option value="business">ビジネス</option>
-</select>
+<!-- テーマ選択（会話モードのときだけ表示） -->
+<div id="theme-area" style="margin-top:10px;">
+    <select id="theme">
+        <option value="daily">日常</option>
+        <option value="travel">旅行</option>
+        <option value="restaurant">レストラン</option>
+        <option value="hotel">ホテル</option>
+        <option value="business">ビジネス</option>
+    </select>
+</div>
 
 <input id="jpInput" type="text" placeholder="日本語を入力…">
 
@@ -181,6 +185,20 @@ def ui():
 <script>
 let recognizer = null;
 let recognizing = false;
+
+function toggleThemeUI() {
+    const mode = document.getElementById("mode").value;
+    const themeArea = document.getElementById("theme-area");
+
+    if (mode === "conversation") {
+        themeArea.style.display = "block";
+    } else {
+        themeArea.style.display = "none";
+    }
+}
+
+// 初期状態（会話モードならテーマ表示）
+toggleThemeUI();
 
 function addMessage(text, who) {
   const div = document.createElement("div");
