@@ -170,6 +170,8 @@ def ui():
 <button id="inputBtn">テキスト入力で会話する</button>
 <button id="talkBtn">会話する（音声）</button>
 
+<button onclick="location.href='/trainer'">瞬間英作文トレーナー</button>
+
 <div id="chat"></div>
 
 <h3>検索結果</h3>
@@ -356,6 +358,88 @@ document.getElementById("talkBtn").onclick = () => {
 </html>
 """
 
+# ============================
+# 瞬間英作文トレーナー UI
+# ============================
+@app.get("/trainer", response_class=HTMLResponse)
+def trainer_ui():
+    return """
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>瞬間英作文トレーナー</title>
+
+<style>
+  body { font-family: sans-serif; padding: 16px; }
+  #jp { font-size: 22px; margin-top: 20px; }
+  #en { 
+    font-size: 22px; 
+    margin-top: 20px; 
+    display: none; 
+    background: #f0f0f0; 
+    padding: 10px; 
+    border-radius: 6px;
+  }
+  button { 
+    width: 100%; 
+    padding: 14px; 
+    font-size: 18px; 
+    margin-top: 12px; 
+  }
+</style>
+</head>
+<body>
+
+<h2>瞬間英作文トレーナー</h2>
+
+<div id="jp">日本語文がここに表示されます</div>
+<div id="en" onclick="speakEnglish()"></div>
+
+<button onclick="showAnswer()">答えを見る</button>
+<button onclick="nextQuestion()">次の問題</button>
+
+<script>
+let currentEnglish = "";
+
+// 英語音声再生
+function speakEnglish() {
+    const utter = new SpeechSynthesisUtterance(currentEnglish);
+    utter.lang = "en-US";
+    speechSynthesis.speak(utter);
+}
+
+// 答えを表示
+function showAnswer() {
+    document.getElementById("en").style.display = "block";
+}
+
+// 次の問題を取得
+async function nextQuestion() {
+    document.getElementById("en").style.display = "none";
+    document.getElementById("en").innerText = "";
+
+    const res = await fetch("/generate_sentence", {
+        method: "POST"
+    });
+
+    const data = await res.json();
+
+    document.getElementById("jp").innerText = data.japanese;
+    document.getElementById("en").innerText = data.english;
+    currentEnglish = data.english;
+}
+
+// 初回ロード時に問題を取得
+nextQuestion();
+</script>
+
+</body>
+</html>
+"""
+
+
 
 # ============================
 # Assist API
@@ -456,3 +540,40 @@ Rules:
     )
 
     return {"reply": res.choices[0].message.content.strip(), "results": None}
+
+@app.post("/generate_sentence")
+def generate_sentence():
+    prompt = """
+You are an English teacher.
+Generate ONE Japanese sentence and its English translation.
+Level: Junior high school (simple grammar only).
+Output format:
+Japanese: 〜〜〜
+English: 〜〜〜
+"""
+
+    res = client.chat.completions.create(
+        model=os.getenv("AZURE_OPENAI_DEPLOYMENT"),
+        messages=[
+            {"role": "system", "content": prompt}
+        ],
+        temperature=0.7,
+        max_tokens=120
+    )
+
+    text = res.choices[0].message.content.strip()
+
+    jp = ""
+    en = ""
+
+    for line in text.split("\n"):
+        line = line.strip()
+        if line.startswith("Japanese:"):
+            jp = line.replace("Japanese:", "").strip()
+        elif line.startswith("English:"):
+            en = line.replace("English:", "").strip()
+
+    return {
+        "japanese": jp,
+        "english": en
+    }
