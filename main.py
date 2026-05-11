@@ -395,8 +395,17 @@ def trainer_ui():
 <h2>瞬間英作文トレーナー</h2>
 
 <div id="jp">日本語文がここに表示されます</div>
-<div id="en" onclick="speakEnglish()"></div>
 
+<div id="en" style="
+    font-size:22px;
+    margin-top:20px;
+    display:none;
+    background:#f0f0f0;
+    padding:10px;
+    border-radius:6px;
+"></div>
+
+<button onclick="speakEnglish()">🔊 英語を再生</button>
 <button onclick="showAnswer()">答えを見る</button>
 <button onclick="nextQuestion()">次の問題</button>
 
