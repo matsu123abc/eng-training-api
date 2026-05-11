@@ -552,10 +552,19 @@ Rules:
 
 @app.post("/generate_sentence")
 def generate_sentence():
+    
     prompt = """
 You are an English teacher.
 Generate ONE Japanese sentence and its English translation.
-Level: Junior high school (simple grammar only).
+Difficulty: Junior high school level, but slightly challenging.
+Use grammar such as:
+- conjunctions (because, when, if)
+- comparative/superlative
+- infinitive and gerund
+- simple relative pronouns
+- two-part sentences
+- natural daily expressions
+
 Output format:
 Japanese: 〜〜〜
 English: 〜〜〜
