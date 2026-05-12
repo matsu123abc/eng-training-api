@@ -388,11 +388,26 @@ def trainer_ui():
     font-size: 18px; 
     margin-top: 12px; 
   }
+  select {
+    width: 100%;
+    padding: 12px;
+    font-size: 18px;
+    margin-top: 10px;
+  }
 </style>
 </head>
 <body>
 
 <h2>瞬間英作文トレーナー</h2>
+
+<!-- ★ テーマ選択を追加 ★ -->
+<select id="theme">
+    <option value="daily">日常</option>
+    <option value="travel">旅行</option>
+    <option value="restaurant">レストラン</option>
+    <option value="hotel">ホテル</option>
+    <option value="business">ビジネス</option>
+</select>
 
 <div id="jp">日本語文がここに表示されます</div>
 
@@ -412,7 +427,7 @@ def trainer_ui():
 <script>
 let currentEnglish = "";
 
-// 英語音声再生
+// 英語音声再生（1回だけ）
 function speakEnglish() {
     const utter = new SpeechSynthesisUtterance(currentEnglish);
     utter.lang = "en-US";
@@ -424,12 +439,14 @@ function showAnswer() {
     document.getElementById("en").style.display = "block";
 }
 
-// 次の問題を取得
+// 次の問題を取得（テーマ付き）
 async function nextQuestion() {
     document.getElementById("en").style.display = "none";
     document.getElementById("en").innerText = "";
 
-    const res = await fetch("/generate_sentence", {
+    const theme = document.getElementById("theme").value;
+
+    const res = await fetch("/generate_sentence?theme=" + theme, {
         method: "POST"
     });
 
@@ -447,8 +464,6 @@ nextQuestion();
 </body>
 </html>
 """
-
-
 
 # ============================
 # Assist API
@@ -550,20 +565,26 @@ Rules:
 
     return {"reply": res.choices[0].message.content.strip(), "results": None}
 
+# ============================
+# 英作文 API
+# ============================
 @app.post("/generate_sentence")
-def generate_sentence():
-    
-    prompt = """
+def generate_sentence(theme: str = "daily"):
+
+    theme_prompts = {
+        "daily": "daily life, habits, hobbies, simple conversations",
+        "travel": "airport, hotel, sightseeing, transportation, shopping",
+        "restaurant": "ordering food, asking recommendations, paying, booking",
+        "hotel": "check-in, facilities, problems, requests",
+        "business": "meetings, requests, explanations, schedules"
+    }
+
+    prompt = f"""
 You are an English teacher.
 Generate ONE Japanese sentence and its English translation.
-Difficulty: Junior high school level, but slightly challenging.
-Use grammar such as:
-- conjunctions (because, when, if)
-- comparative/superlative
-- infinitive and gerund
-- simple relative pronouns
-- two-part sentences
-- natural daily expressions
+Theme: {theme_prompts.get(theme, "daily life")}
+Difficulty: Junior high school level but slightly challenging.
+Use natural expressions.
 
 Output format:
 Japanese: 〜〜〜
@@ -572,11 +593,9 @@ English: 〜〜〜
 
     res = client.chat.completions.create(
         model=os.getenv("AZURE_OPENAI_DEPLOYMENT"),
-        messages=[
-            {"role": "system", "content": prompt}
-        ],
-        temperature=0.7,
-        max_tokens=120
+        messages=[{"role": "system", "content": prompt}],
+        temperature=0.8,
+        max_tokens=150
     )
 
     text = res.choices[0].message.content.strip()
@@ -585,13 +604,10 @@ English: 〜〜〜
     en = ""
 
     for line in text.split("\n"):
-        line = line.strip()
         if line.startswith("Japanese:"):
             jp = line.replace("Japanese:", "").strip()
         elif line.startswith("English:"):
             en = line.replace("English:", "").strip()
 
-    return {
-        "japanese": jp,
-        "english": en
-    }
+    return {"japanese": jp, "english": en}
+
