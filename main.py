@@ -571,7 +571,10 @@ Rules:
 # ============================
 @app.post("/generate_sentence")
 def generate_sentence(theme: str = "daily"):
-    # --- シーン定義（Python側で強制ランダム） ---
+
+    import random
+
+    # --- シーン定義 ---
     travel_scenes = [
         "空港でのチェックイン",
         "空港での荷物トラブル",
@@ -646,21 +649,53 @@ def generate_sentence(theme: str = "daily"):
         "daily": daily_scenes
     }
 
-    # --- Python側でシーンを強制ランダム選択 ---
-    selected_scene = random.choice(scene_map.get(theme, daily_scenes))
+    # --- 文のタイプ（創造性を強制） ---
+    sentence_styles = [
+        "依頼文",
+        "質問文",
+        "理由を含む文",
+        "条件文（if）",
+        "比較を含む文",
+        "目的を含む文（〜するために）",
+        "経験を聞く文（〜したことがありますか）",
+        "感情を含む文（困っている・嬉しいなど）",
+        "説明文（状況説明）",
+        "提案文（〜した方がいい）"
+    ]
 
-    # --- AIに渡すプロンプト（シーン固定） ---
+    # --- 文法構造（構文の多様性を強制） ---
+    grammar_patterns = [
+        "if を使う",
+        "because を使う",
+        "when を使う",
+        "to不定詞を使う",
+        "動名詞を使う",
+        "比較級を使う",
+        "最上級を使う",
+        "助動詞（can, should, must）を使う",
+        "現在完了を使う",
+        "過去進行形を使う"
+    ]
+
+    # --- ランダム選択 ---
+    selected_scene = random.choice(scene_map.get(theme, daily_scenes))
+    selected_style = random.choice(sentence_styles)
+    selected_grammar = random.choice(grammar_patterns)
+
+    # --- AIに渡すプロンプト ---
     prompt = f"""
 You are an English teacher.
 Generate ONE Japanese sentence and its English translation.
 
 Scene: {selected_scene}
+Sentence style: {selected_style}
+Grammar pattern: {selected_grammar}
 
 RULES:
-- The sentence MUST match the scene above.
+- The sentence MUST match the scene, style, and grammar pattern above.
 - Never repeat similar sentence patterns.
 - Use different verbs, subjects, and structures each time.
-- Make the sentence practical and realistic.
+- Make the sentence practical, realistic, and creative.
 - Keep grammar within junior high school level.
 
 Output format:
@@ -672,7 +707,7 @@ English: 〜〜〜
     res = client.chat.completions.create(
         model=os.getenv("AZURE_OPENAI_DEPLOYMENT"),
         messages=[{"role": "system", "content": prompt}],
-        temperature=0.9,
+        temperature=1.0,
         max_tokens=150
     )
 
