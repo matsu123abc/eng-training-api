@@ -5,6 +5,7 @@ from fastapi.responses import HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from openai import AzureOpenAI
+import random
 
 app = FastAPI()
 
@@ -570,93 +571,108 @@ Rules:
 # ============================
 @app.post("/generate_sentence")
 def generate_sentence(theme: str = "daily"):
+    # --- シーン定義（Python側で強制ランダム） ---
+    travel_scenes = [
+        "空港でのチェックイン",
+        "空港での荷物トラブル",
+        "飛行機内での会話",
+        "ホテルのチェックイン",
+        "ホテルの設備トラブル",
+        "観光地での道案内",
+        "観光地でのチケット購入",
+        "レストランでの注文",
+        "買い物での値段交渉",
+        "交通機関（電車・バス）での質問",
+        "トラブル（迷子・紛失・体調不良）",
+        "天気や予定の相談"
+    ]
 
-    theme_prompts = {
-        "daily": "daily life, habits, hobbies, simple conversations",
-        "travel": "airport, hotel, sightseeing, transportation, shopping",
-        "restaurant": "ordering food, asking recommendations, paying, booking",
-        "hotel": "check-in, facilities, problems, requests",
-        "business": "meetings, requests, explanations, schedules"
+    restaurant_scenes = [
+        "おすすめ料理を聞く",
+        "アレルギーの相談",
+        "席の希望を伝える",
+        "料理の味や辛さを聞く",
+        "注文の変更",
+        "飲み物の注文",
+        "会計の依頼",
+        "予約の変更",
+        "料理が遅いと伝える",
+        "料理が間違っていると伝える"
+    ]
+
+    hotel_scenes = [
+        "チェックイン",
+        "チェックアウト",
+        "Wi-Fiの問題",
+        "シャワーやエアコンのトラブル",
+        "清掃の依頼",
+        "荷物預かり",
+        "周辺案内を聞く",
+        "タクシーの手配",
+        "予約の変更",
+        "部屋の変更依頼"
+    ]
+
+    business_scenes = [
+        "会議の予定調整",
+        "資料の依頼",
+        "説明を求める",
+        "メールの確認",
+        "プレゼンの準備",
+        "トラブルの報告",
+        "同僚への相談",
+        "進捗の共有",
+        "提案をする"
+    ]
+
+    daily_scenes = [
+        "習慣の話",
+        "今日の予定",
+        "家事の話",
+        "趣味の話",
+        "健康の話",
+        "友達との予定",
+        "家族の話",
+        "買い物の話",
+        "学校や仕事の話",
+        "天気の話"
+    ]
+
+    scene_map = {
+        "travel": travel_scenes,
+        "restaurant": restaurant_scenes,
+        "hotel": hotel_scenes,
+        "business": business_scenes,
+        "daily": daily_scenes
     }
 
+    # --- Python側でシーンを強制ランダム選択 ---
+    selected_scene = random.choice(scene_map.get(theme, daily_scenes))
 
+    # --- AIに渡すプロンプト（シーン固定） ---
     prompt = f"""
 You are an English teacher.
 Generate ONE Japanese sentence and its English translation.
 
-Theme: {theme_prompts.get(theme, "daily life")}
+Scene: {selected_scene}
 
 RULES:
+- The sentence MUST match the scene above.
 - Never repeat similar sentence patterns.
-- Avoid generating sentences similar to previous ones.
-- Use different verbs, subjects, and sentence structures each time.
-- Randomly choose a situation from the theme.
-- Use natural expressions within junior high school grammar.
+- Use different verbs, subjects, and structures each time.
 - Make the sentence practical and realistic.
-
-# --- Theme: TRAVEL ---
-If theme is TRAVEL, randomly choose from:
-- 空港（チェックイン、荷物、遅延、乗り継ぎ、保安検査）
-- 機内（座席、飲み物、トラブル、隣の人との会話）
-- ホテル（チェックイン、設備、苦情、予約、Wi-Fi、清掃）
-- 観光（道案内、写真、チケット、営業時間、観光地の説明）
-- 交通（電車、地下鉄、バス、タクシー、レンタカー）
-- 買い物（値段、サイズ、免税、返品、試着）
-- レストラン（注文、支払い、予約、混雑、料理の説明）
-- トラブル（迷子、紛失、体調不良、助けを求める）
-- 天気・予定・計画（明日の予定、天気、変更）
-- コミュニケーション（お願い、質問、依頼、確認）
-
-# --- Theme: RESTAURANT ---
-If theme is RESTAURANT, randomly choose from:
-- 注文（おすすめ、人気メニュー、アレルギー）
-- 席（窓側、静かな席、混雑）
-- 料理（味、辛さ、量、変更、追加）
-- 飲み物（注文、氷なし、温度）
-- 会計（割り勘、カード、チップ、レシート）
-- 予約（時間変更、人数変更、満席）
-- トラブル（遅い、間違い、冷たい、足りない）
-- サービス（店員への依頼、質問）
-
-# --- Theme: HOTEL ---
-If theme is HOTEL, randomly choose from:
-- チェックイン・チェックアウト
-- 設備（Wi-Fi、シャワー、エアコン、テレビ）
-- 予約（変更、延泊、人数変更）
-- トラブル（鍵、騒音、壊れている、清掃）
-- 荷物（預かり、運搬、紛失）
-- 周辺案内（レストラン、観光地、交通）
-- サービス（タクシー手配、モーニングコール）
-
-# --- Theme: BUSINESS ---
-If theme is BUSINESS, randomly choose from:
-- 会議（時間、場所、準備、資料）
-- 予定調整（変更、確認、提案）
-- 依頼（作業、説明、サポート）
-- メール（返信、添付、確認）
-- プレゼン（準備、説明、質問）
-- トラブル（遅延、誤解、修正）
-- 同僚との会話（相談、報告、共有）
-
-# --- Theme: DAILY ---
-If theme is DAILY, randomly choose from:
-- 習慣（運動、食事、睡眠）
-- 予定（今日、明日、週末）
-- 家事（掃除、洗濯、料理）
-- 趣味（映画、音楽、ゲーム）
-- 健康（体調、薬、運動）
-- 友達・家族（予定、相談、連絡）
-- 買い物（食材、日用品、比較）
+- Keep grammar within junior high school level.
 
 Output format:
 Japanese: 〜〜〜
 English: 〜〜〜
 """
 
+    # --- Azure OpenAI 呼び出し ---
     res = client.chat.completions.create(
         model=os.getenv("AZURE_OPENAI_DEPLOYMENT"),
         messages=[{"role": "system", "content": prompt}],
-        temperature=0.8,
+        temperature=0.9,
         max_tokens=150
     )
 
@@ -672,4 +688,3 @@ English: 〜〜〜
             en = line.replace("English:", "").strip()
 
     return {"japanese": jp, "english": en}
-
